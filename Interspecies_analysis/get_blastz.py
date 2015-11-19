@@ -12,6 +12,7 @@ import Bio
 from Bio import Phylo
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 from pylab import *
 
@@ -91,7 +92,7 @@ def get_regions(bedfile, outfilename, additional_info):
                         if int(eachline[2]) < enhancer_coord1:
                             fragment_length = fragment_length - (enhancer_coord1 - int(eachline[2])) 
                         aligned = aligned + fragment_length
-                        blast_z_list.append((float(eachline[8].strip())/1) * (fragment_length/(enhancer_coord2 - enhancer_coord1)))
+                        blast_z_list.append(float(eachline[8].strip()))
                 coverage = 100 * float(aligned)/float(enhancer_coord2 - enhancer_coord1) 
                 if aligned == 0:
                     coverage = 0
@@ -127,91 +128,104 @@ def get_regions(bedfile, outfilename, additional_info):
                     mean_blastz_list = np.asarray(blast_z_list)
                     print np.sum(mean_blastz_list), np.mean(mean_blastz_list)
                     if current_name == "droSim1":
-                        sim_list.append(np.sum(mean_blastz_list)/50000)
+                        sim_list.append(np.mean(mean_blastz_list)/55000)
                         sim_cov.append(coverage)
                     elif current_name == "droSec1":
-                        sech_list.append(np.sum(mean_blastz_list)/50000)
+                        sech_list.append(np.mean(mean_blastz_list)/55000)
                         sech_cov.append(coverage)
                     elif current_name == "droYak2":
-                        yak_list.append(np.sum(mean_blastz_list)/50000)
+                        yak_list.append(np.mean(mean_blastz_list)/55000)
                         yak_cov.append(coverage)
                     elif current_name == "droEre2":
-                        ere_list.append(np.sum(mean_blastz_list)/50000)
+                        ere_list.append(np.mean(mean_blastz_list)/55000)
                         ere_cov.append(coverage)
                     elif current_name == "droAna3":
-                        ana_list.append(np.sum(mean_blastz_list)/5000)
+                        ana_list.append(np.mean(mean_blastz_list)/5000)
                         ana_cov.append(coverage)
                     elif current_name == "dp4":
-                        pse_list.append(np.sum(mean_blastz_list)/5000)
+                        pse_list.append(np.mean(mean_blastz_list)/5000)
                         pse_cov.append(coverage)
                     elif current_name == "droWil1":
-                        wil_list.append(np.sum(mean_blastz_list)/5000)
+                        wil_list.append(np.mean(mean_blastz_list)/5000)
                         wil_cov.append(coverage)
                     elif current_name == "droVir3":
-                        vir_list.append(np.sum(mean_blastz_list)/5000)
+                        vir_list.append(np.mean(mean_blastz_list)/5000)
                         vir_cov.append(coverage)
                     elif current_name == "droGri2":
-                        gri_list.append(np.sum(mean_blastz_list)/5000)
+                        gri_list.append(np.mean(mean_blastz_list)/5000)
                         gri_cov.append(coverage)                
                 outfile.write("," + str(np.mean(mean_blastz_list)) + "," + str(coverage))
     outfile.close()
     myfile.close()
-    return_list_blastz = [sim_list, yak_list, ere_list, ana_list, pse_list, wil_list, vir_list, gri_list]
-    return_list_cov = [sim_cov, yak_cov, ere_cov, ana_cov, pse_cov, wil_cov, vir_cov, gri_cov]
+    return_list_blastz = [sim_list, sech_list, yak_list, ere_list, ana_list, pse_list, wil_list, vir_list, gri_list]
+    return_list_cov = [sim_cov, sech_cov, yak_cov, ere_cov, ana_cov, pse_cov, wil_cov, vir_cov, gri_cov]
     return(return_list_blastz, return_list_cov, enhancer_list)
 
 def make_plots(blastz_info, cov_info, current_regions, additional_info):
     N = len(blastz_info[0])
     ind = np.arange(N)
     width = 0.75
+    rot = 65
     mydata1 = [np.array(i) for i in blastz_info[0:4]]
     mydata2 = [np.array(i) for i in blastz_info[4:]]
     mycov = [np.array(i) for i in cov_info]
     fig,a = plt.subplots()
     for i in range(len(mycov)):
+        if len(mycov[i]) <= 10:
+            rot = 20
+        else:
+            rot = 65
         bottom = 100 * i
         color = plt.cm.Dark2(i * 20)
         p1 = a.bar(ind, mycov[i], color = color, bottom = bottom, width = width)
-        plt.xticks(ind + width/2, current_regions, rotation = 45)
+        plt.xticks(ind + width/2, current_regions, rotation = rot)
         a.yaxis.set_visible(False)
         plt.ylabel('Percent coverage by species')
-    savefig(additional_info + "_cov", bbox_inches='tight')
+    with PdfPages(additional_info + "_cov.pdf") as pdf:
+        pdf.savefig()
     plt.close()
     q = 0
     for i in range(len(mydata1)):
+        if len(mydata1[i]) <= 10:
+            rot = 20
+        else:
+            rot = 65
         if i == 0:
             bottom = 0  
         else:
             bottom = i * 100          
         color = plt.cm.Dark2(i * 20)
         p2 = plt.bar(ind, mydata1[i], color = color, bottom = bottom, width = width)
-        plt.xticks(ind + width/2, current_regions, rotation = 45)
-        #bottom = bottom + mydata1[i]
-        plt.ylabel('blastz score * 5e-7')
+        plt.xticks(ind + width/2, current_regions, rotation = rot)
+        plt.ylabel('blastz score * 5e-5')
         q = q + 1
-    savefig(additional_info + "_1blastz", bbox_inches='tight')
+    with PdfPages(additional_info + "_1blastz.pdf") as pdf:
+        pdf.savefig()
     plt.close()
     for j in range(len(mydata2)):
-        if j <= 0:
+        if len(mydata2[j]) <= 10:
+            rot = 20
+        else:
+            rot = 65
+        if j == 0:
             bottom = 0
         else:
             bottom = j * 100  
         color = plt.cm.Dark2(q * 20)
-        p2 = plt.bar(ind, mydata2[i], color = color, bottom = bottom, width = width)
-        plt.xticks(ind + width/2, current_regions, rotation = 45)
-        #bottom = bottom + mydata2[j]
-        plt.ylabel('blastz score * 2e-6')
+        p2 = plt.bar(ind, mydata2[j], color = color, bottom = bottom, width = width)
+        plt.xticks(ind + width/2, current_regions, rotation = rot)
+        plt.ylabel('blastz score * 2.5e-3')
         q = q + 1
-    savefig(additional_info + "_2blastz", bbox_inches='tight')
+    with PdfPages(additional_info + "_2blastz.pdf") as pdf:
+        pdf.savefig()
     plt.close()
-    #box = plt.boxplot(mylist, 1, '', patch_artist=True)
-    #plt.bar(ind,sim_list, width=0.2,color='b',align='center')
-    #savefig("temp", bbox_inches='tight')
     print "length is ", len(mydata1)
 
 
 blastz_scores, cov_scores, regions, = get_regions("InR_sequences.bedgraph", "test_InR_seqs.tsv", "genes_exons")
 make_plots(blastz_scores, cov_scores, regions, "genes_exonsTEST")
+blastz_scores2, cov_scores2, regions2, = get_regions("InR_crms.bedgraph", "test_InR_crms.tsv", "InR_regions")
+make_plots(blastz_scores2, cov_scores2, regions2, "InR_regionsTEST")
 #get_regions("InR_crms.bedgraph", "test_InR.tsv", "InR_crms")
 
 tree = Phylo.read("Drosophila.dnd", "newick")
@@ -240,6 +254,7 @@ tree.clade[1,1,1,1,1,1,0,1].color = "#1b9e77"
 
 
 Phylo.draw(tree)
-savefig("mytree1")
+with PdfPages("Drosophila_phylogeny.pdf") as pdf:
+    pdf.savefig()
 
 
