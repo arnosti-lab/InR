@@ -1,0 +1,1 @@
+for FILENAME in *; do sed -e 's/chr//' $FILENAME | awk '{OFS="\t"; if (!/^#/){print $1,$2-1,$2,$4"/"$5,"+"}}' > adjusted_$FILENAME; done
