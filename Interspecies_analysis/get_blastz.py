@@ -16,6 +16,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 from pylab import *
 
+temp_file = open("temp_file.txt", "w")
 
 #This is the worst function I've ever written :-(
 def get_regions(bedfile, outfilename, additional_info):
@@ -64,9 +65,11 @@ def get_regions(bedfile, outfilename, additional_info):
             enhancer_coord2 = int(newline[2])
             enhancer_label = newline[3]
             enhancer_list.append(enhancer_label)
+            temp_file.write(enhancer_label)
             temp = [1,2,3]
             for i in file_list:
                 current_name = i.strip("\.summary\.txt")
+                temp_file.write(current_name)
                 current_name = re.sub(".+dm3.", "", current_name)
                 print current_name
                 blast_z_list = []
@@ -84,6 +87,8 @@ def get_regions(bedfile, outfilename, additional_info):
                     else:
                         count = count + 1
                         sequence_length = float(int(eachline[3]) - int(eachline[2]))
+                        print "sequence length: ", sequence_length
+                        temp_file.write(line)
                         fragment_length = float(int(eachline[3]) - int(eachline[2]))
                         if sequence_length == 0:
                             break
@@ -92,7 +97,7 @@ def get_regions(bedfile, outfilename, additional_info):
                         if int(eachline[2]) < enhancer_coord1:
                             fragment_length = fragment_length - (enhancer_coord1 - int(eachline[2])) 
                         aligned = aligned + fragment_length
-                        blast_z_list.append(float(eachline[8].strip()))
+                        blast_z_list.append(float(eachline[8].strip()) * (float(fragment_length)/float(int(eachline[3]) - int(eachline[2]))))
                 coverage = 100 * float(aligned)/float(enhancer_coord2 - enhancer_coord1) 
                 if aligned == 0:
                     coverage = 0
@@ -125,36 +130,39 @@ def get_regions(bedfile, outfilename, additional_info):
                         gri_list.append(0)
                         gri_cov.append(0)              
                 else:
+                    blast_z_list = [float(i)/(float((enhancer_coord2 - enhancer_coord1)/100)) for i in blast_z_list]
                     mean_blastz_list = np.asarray(blast_z_list)
                     print np.sum(mean_blastz_list), np.mean(mean_blastz_list)
                     if current_name == "droSim1":
-                        sim_list.append(np.mean(mean_blastz_list)/55000)
+                        sim_list.append(np.sum(mean_blastz_list))
                         sim_cov.append(coverage)
+                        print len(mean_blastz_list)
                     elif current_name == "droSec1":
-                        sech_list.append(np.mean(mean_blastz_list)/55000)
+                        sech_list.append(np.sum(mean_blastz_list))
                         sech_cov.append(coverage)
                     elif current_name == "droYak2":
-                        yak_list.append(np.mean(mean_blastz_list)/55000)
+                        yak_list.append(np.sum(mean_blastz_list))
                         yak_cov.append(coverage)
                     elif current_name == "droEre2":
-                        ere_list.append(np.mean(mean_blastz_list)/55000)
+                        ere_list.append(np.sum(mean_blastz_list))
                         ere_cov.append(coverage)
                     elif current_name == "droAna3":
-                        ana_list.append(np.mean(mean_blastz_list)/5000)
+                        ana_list.append(np.sum(mean_blastz_list))
                         ana_cov.append(coverage)
                     elif current_name == "dp4":
-                        pse_list.append(np.mean(mean_blastz_list)/5000)
+                        pse_list.append(np.sum(mean_blastz_list))
                         pse_cov.append(coverage)
                     elif current_name == "droWil1":
-                        wil_list.append(np.mean(mean_blastz_list)/5000)
+                        wil_list.append(np.sum(mean_blastz_list))
                         wil_cov.append(coverage)
                     elif current_name == "droVir3":
-                        vir_list.append(np.mean(mean_blastz_list)/5000)
+                        vir_list.append(np.sum(mean_blastz_list))
                         vir_cov.append(coverage)
                     elif current_name == "droGri2":
-                        gri_list.append(np.mean(mean_blastz_list)/5000)
+                        gri_list.append(np.sum(mean_blastz_list))
                         gri_cov.append(coverage)                
-                outfile.write("," + str(np.mean(mean_blastz_list)) + "," + str(coverage))
+                outfile.write("," + str(np.sum(mean_blastz_list)) + "," + str(coverage))
+                temp_file.write(str(aligned) + "," + str(coverage) + "\r\n" )
     outfile.close()
     myfile.close()
     return_list_blastz = [sim_list, sech_list, yak_list, ere_list, ana_list, pse_list, wil_list, vir_list, gri_list]
@@ -166,8 +174,8 @@ def make_plots(blastz_info, cov_info, current_regions, additional_info):
     ind = np.arange(N)
     width = 0.75
     rot = 65
-    mydata1 = [np.array(i) for i in blastz_info[0:4]]
-    mydata2 = [np.array(i) for i in blastz_info[4:]]
+    mydata = [np.array(log10(i)) for i in blastz_info]
+    #mystd = [np.array(log10(i)) for i in std_blast]
     mycov = [np.array(i) for i in cov_info]
     fig,a = plt.subplots()
     for i in range(len(mycov)):
@@ -184,46 +192,37 @@ def make_plots(blastz_info, cov_info, current_regions, additional_info):
     with PdfPages(additional_info + "_cov.pdf") as pdf:
         pdf.savefig()
     plt.close()
-    q = 0
-    for i in range(len(mydata1)):
-        if len(mydata1[i]) <= 10:
-            rot = 20
-        else:
-            rot = 65
-        if i == 0:
-            bottom = 0  
-        else:
-            bottom = i * 100          
-        color = plt.cm.Dark2(i * 20)
-        p2 = plt.bar(ind, mydata1[i], color = color, bottom = bottom, width = width)
-        plt.xticks(ind + width/2, current_regions, rotation = rot)
-        plt.ylabel('blastz score * 5e-5')
-        q = q + 1
-    with PdfPages(additional_info + "_1blastz.pdf") as pdf:
-        pdf.savefig()
-    plt.close()
-    for j in range(len(mydata2)):
-        if len(mydata2[j]) <= 10:
+    fig2,ax = plt.subplots()
+    for j in range(len(mydata)):
+        if len(mycov[i]) <= 10:
             rot = 20
         else:
             rot = 65
         if j == 0:
             bottom = 0
         else:
-            bottom = j * 100  
-        color = plt.cm.Dark2(q * 20)
-        p2 = plt.bar(ind, mydata2[j], color = color, bottom = bottom, width = width)
+            bottom = (j * 4)
+        print "bottom = ", bottom
+        color = plt.cm.Dark2(j* 20)
+        p2 = plt.bar(ind, mydata[j], color = color, bottom = bottom, width = 0.75)
+        plt.ylim([0,36])
+        ax.tick_params(axis='y', direction = 'in', length=2, width=0.4)
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+        ax.set_yticks([4, 8, 12, 16, 20, 24, 28, 32, 36])
+        ax.set_yticklabels(['']*9)
+        #for tick in ax.yaxis.get_major_ticks():
+        #    tick.label.set_fontsize(7) 
         plt.xticks(ind + width/2, current_regions, rotation = rot)
-        plt.ylabel('blastz score * 2.5e-3')
-        q = q + 1
-    with PdfPages(additional_info + "_2blastz.pdf") as pdf:
+        plt.ylabel('log transformed blastZ over 100bp')
+    with PdfPages(additional_info + "_newblastz.pdf") as pdf:
         pdf.savefig()
     plt.close()
-    print "length is ", len(mydata1)
+    print "length is ", len(mydata)
 
 
-blastz_scores, cov_scores, regions, = get_regions("InR_sequences.bedgraph", "test_InR_seqs.tsv", "genes_exons")
-make_plots(blastz_scores, cov_scores, regions, "genes_exonsTEST")
+#blastz_scores, cov_scores, regions, = get_regions("InR_sequences.bedgraph", "test_InR_seqs.tsv", "genes_exons")
+#make_plots(blastz_scores, cov_scores, regions, "genes_exonsTEST")
 blastz_scores2, cov_scores2, regions2, = get_regions("InR_crms.bedgraph", "test_InR_crms.tsv", "InR_regions")
 make_plots(blastz_scores2, cov_scores2, regions2, "InR_regionsTEST")
 #get_regions("InR_crms.bedgraph", "test_InR.tsv", "InR_crms")
