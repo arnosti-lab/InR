@@ -1,0 +1,12 @@
+chr3R_0 -2.08
+chr3R_1 -1.97
+chr3R_2 -2.1
+chr3R_3 -1.81
+chr3R_4 -1.84
+chr3R_5 -1.84
+chr3R_6 -1.9
+chr3R_7 -1.96
+chr3R_8 -1.71
+chr3R_9 -1.9
+
+InR_region  -1.98
